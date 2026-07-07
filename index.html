@@ -25,29 +25,26 @@
 <nav class="bottomNav"><div class="bottomNavInner" id="nav"></div></nav>
 <div id="modalRoot"></div>
 <script>
-const fresh=()=>({settings:{employers:[{id:uid(),name:'Parkkaffee',rate:15.30,color:'#2563eb'}]},plans:[],shifts:[],payments:[],active:null});
+const OLD={rate:15.30,shifts:[
+{date:"2026-06-17",start:"09:00",end:"16:45",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-18",start:"09:00",end:"17:00",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-25",start:"09:00",end:"17:00",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-30",start:"09:00",end:"21:00",breakMin:120,note:"uit Excel",employer:"Parkkaffee"},
+{date:"2025-07-17",start:"15:00",end:"01:00",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-20",start:"18:00",end:"00:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-23",start:"18:00",end:"23:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-24",start:"16:30",end:"00:10",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-25",start:"13:30",end:"22:00",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-29",start:"18:00",end:"23:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-30",start:"13:48",end:"00:40",breakMin:90,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-31",start:"13:30",end:"00:30",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-01",start:"18:00",end:"23:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-10",start:"15:00",end:"21:00",breakMin:45,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-12",start:"18:00",end:"00:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-14",start:"15:00",end:"00:15",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-15",start:"18:00",end:"22:00",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-27",start:"18:00",end:"00:10",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-29",start:"19:00",end:"00:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"}],payments:[{date:"2025-07-23",amount:226.24,note:"uit Excel"},{date:"2025-08-06",amount:74.24,note:"uit Excel"},{date:"2025-08-06",amount:646.91,note:"uit Excel"},{date:"2025-08-08",amount:49.87,note:"uit Excel"},{date:"2025-08-14",amount:74.24,note:"uit Excel"},{date:"2025-08-21",amount:268.67,note:"uit Excel"}]};
+
+const fresh=()=>({settings:{employers:[{id:uid(),name:'Parkkaffee',rate:15.30,color:'#2563eb'}]},plans:[],shifts:OLD.shifts.map(x=>({...x,id:uid(),rate:x.date.startsWith('2025')?14.88:15.30,employer:'Parkkaffee'})),payments:OLD.payments.map(x=>({...x,id:uid()})),active:null});
 let state=load();let page=localStorage.getItem('wt_page')||'home';let calDate=new Date();let theme=localStorage.getItem('wt_theme')||'system';
 const PAGES=[['home','🏠','Home'],['planning','📅','Planning'],['shifts','⏱️','Shifts'],['pay','💳','Loon'],['stats','📊','Stats']];
 const $=id=>document.getElementById(id), eur=n=>new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(n||0), num=n=>new Intl.NumberFormat('nl-BE',{maximumFractionDigits:2,minimumFractionDigits:2}).format(n||0);
 function uid(){return Math.random().toString(36).slice(2,9)}function today(){return new Date().toISOString().slice(0,10)}
 function load(){
     let saved=localStorage.getItem('worktracker_v3');
-    let data=null;
-    if(saved){ data=JSON.parse(saved); }
-    else{
-        let old=localStorage.getItem('pk_loon_v1');
-        if(old){
-            try{
-                let o=JSON.parse(old), first=Object.values(o)[0];
-                data={settings:{employers:[{id:uid(),name:'Parkkaffee',rate:first.rate||15.3,color:'#2563eb'}]},plans:[],shifts:first.shifts.map(s=>({...s,id:uid(),rate:first.rate||15.3,employer:'Parkkaffee'})),payments:(first.payments||[]).map(p=>({...p,id:uid()})),active:null};
-            }catch(e){}
-        }
+    if(saved) return JSON.parse(saved);
+    let old=localStorage.getItem('pk_loon_v1');
+    if(old){
+        try{
+            let o=JSON.parse(old), first=Object.values(o)[0];
+            return {settings:{employers:[{id:uid(),name:'Parkkaffee',rate:first.rate||15.3,color:'#2563eb'}]},plans:[],shifts:first.shifts.map(s=>({...s,id:uid(),rate:first.rate||15.3,employer:'Parkkaffee'})),payments:(first.payments||[]).map(p=>({...p,id:uid()})),active:null};
+        }catch(e){}
     }
-    if(!data) data=fresh();
-    if(data.settings && !data.settings.employers) {
-        data.settings.employers=[{id:uid(),name:data.settings.employer||'Werk',rate:data.settings.rate||15.3,color:'#2563eb'}];
-    }
-    return data;
+    return fresh();
 }
 function applyTheme(t){if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t)}
 window.changeTheme=(t)=>{theme=t;localStorage.setItem('wt_theme',t);applyTheme(t)};
@@ -101,7 +98,7 @@ function delPlan(id){if(confirm('Geplande dag verwijderen?')){state.plans=state.
 function startPlan(id){let p=state.plans.find(x=>x.id===id);state.active={planId:id,startedAt:Date.now(),date:p.date,employer:p.employer,note:p.note,rate:getEmp(p.employer).rate};page='home';render()}
 function finishActive(){let a=state.active, now=new Date(), start=new Date(a.startedAt);let s={id:uid(),date:a.date||today(),start:start.toTimeString().slice(0,5),end:now.toTimeString().slice(0,5),breakMin:0,rate:a.rate,employer:a.employer,note:a.note||'gestart via timer'};state.shifts.push(s);if(a.planId)state.plans=state.plans.filter(p=>p.id!==a.planId);state.active=null;page='shifts';render();openShift(s.id)}function cancelActive(){if(confirm('Lopende shift annuleren?')){state.active=null;render()}}
 $('fab').onclick=()=>{if(page==='planning')openPlan();else if(page==='pay')openPayment();else openShift()};$('backupBtn').onclick=()=>openModal('Backup',`<div class="quickgrid"><button id="exJson" class="secondary">Export JSON</button><button id="exCsv" class="secondary">Export CSV</button></div><label>Import JSON</label><input id="importFile" type="file" accept="application/json"><div style="height:10px"></div><button class="danger" id="resetApp">Reset app</button>`,'Klaar',closeModal);
-document.addEventListener('click',e=>{if(e.target.id==='exJson'){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});download(blob,'worktracker-backup.json')}if(e.target.id==='exCsv'){let rows=['datum,start,einde,pauze_min,uurloon,uren,loon,werkgever,notitie',...state.shifts.map(s=>[s.date,s.start,s.end,s.breakMin||0,s.rate||0,num(hours(s)),num(money(s)),s.employer||'',(s.note||'').replaceAll(',',' ')].join(','))];download(new Blob([rows.join('\\n')],{type:'text/csv'}),'worktracker-shifts.csv')}if(e.target.id==='resetApp'&&confirm('Alles resetten naar startdata?')){state=fresh();closeModal();render()}});
+document.addEventListener('click',e=>{if(e.target.id==='exJson'){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});download(blob,'worktracker-backup.json')}if(e.target.id==='exCsv'){let rows=['datum,start,einde,pauze_min,uurloon,uren,loon,werkgever,notitie',...state.shifts.map(s=>[s.date,s.start,s.end,s.breakMin||0,s.rate||0,num(hours(s)),num(money(s)),s.employer||'',(s.note||'').replaceAll(',',' ')].join(','))];download(new Blob([rows.join('\n')],{type:'text/csv'}),'worktracker-shifts.csv')}if(e.target.id==='resetApp'&&confirm('Alles resetten naar startdata?')){state=fresh();closeModal();render()}});
 document.addEventListener('change',e=>{if(e.target.id==='importFile'){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);closeModal();render()}catch(err){alert('Import mislukt')}};r.readAsText(f)}});function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js').catch(()=>{});render();
 </script>

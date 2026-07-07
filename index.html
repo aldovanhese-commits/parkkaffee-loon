@@ -25,26 +25,19 @@
 <nav class="bottomNav"><div class="bottomNavInner" id="nav"></div></nav>
 <div id="modalRoot"></div>
 <script>
-const OLD={rate:15.30,shifts:[
-{date:"2026-06-17",start:"09:00",end:"16:45",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-18",start:"09:00",end:"17:00",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-25",start:"09:00",end:"17:00",breakMin:60,note:"uit Excel",employer:"Parkkaffee"},{date:"2026-06-30",start:"09:00",end:"21:00",breakMin:120,note:"uit Excel",employer:"Parkkaffee"},
-{date:"2025-07-17",start:"15:00",end:"01:00",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-20",start:"18:00",end:"00:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-23",start:"18:00",end:"23:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-24",start:"16:30",end:"00:10",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-25",start:"13:30",end:"22:00",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-29",start:"18:00",end:"23:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-30",start:"13:48",end:"00:40",breakMin:90,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-07-31",start:"13:30",end:"00:30",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-01",start:"18:00",end:"23:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-10",start:"15:00",end:"21:00",breakMin:45,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-12",start:"18:00",end:"00:15",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-14",start:"15:00",end:"00:15",breakMin:30,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-15",start:"18:00",end:"22:00",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-27",start:"18:00",end:"00:10",breakMin:0,note:"uit Excel",employer:"Parkkaffee"},{date:"2025-08-29",start:"19:00",end:"00:30",breakMin:0,note:"uit Excel",employer:"Parkkaffee"}],payments:[{date:"2025-07-23",amount:226.24,note:"uit Excel"},{date:"2025-08-06",amount:74.24,note:"uit Excel"},{date:"2025-08-06",amount:646.91,note:"uit Excel"},{date:"2025-08-08",amount:49.87,note:"uit Excel"},{date:"2025-08-14",amount:74.24,note:"uit Excel"},{date:"2025-08-21",amount:268.67,note:"uit Excel"}]};
-
-const fresh=()=>({settings:{employers:[{id:uid(),name:'Parkkaffee',rate:15.30,color:'#2563eb'}]},plans:[],shifts:OLD.shifts.map(x=>({...x,id:uid(),rate:x.date.startsWith('2025')?14.88:15.30,employer:'Parkkaffee'})),payments:OLD.payments.map(x=>({...x,id:uid()})),active:null});
+const fresh=()=>({settings:{employers:[]},plans:[],shifts:[],payments:[],active:null});
 let state=load();let page=localStorage.getItem('wt_page')||'home';let calDate=new Date();let theme=localStorage.getItem('wt_theme')||'system';
 const PAGES=[['home','🏠','Home'],['planning','📅','Planning'],['shifts','⏱️','Shifts'],['pay','💳','Loon'],['stats','📊','Stats']];
 const $=id=>document.getElementById(id), eur=n=>new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(n||0), num=n=>new Intl.NumberFormat('nl-BE',{maximumFractionDigits:2,minimumFractionDigits:2}).format(n||0);
 function uid(){return Math.random().toString(36).slice(2,9)}function today(){return new Date().toISOString().slice(0,10)}
 function load(){
     let saved=localStorage.getItem('worktracker_v3');
-    if(saved) return JSON.parse(saved);
-    let old=localStorage.getItem('pk_loon_v1');
-    if(old){
-        try{
-            let o=JSON.parse(old), first=Object.values(o)[0];
-            return {settings:{employers:[{id:uid(),name:'Parkkaffee',rate:first.rate||15.3,color:'#2563eb'}]},plans:[],shifts:first.shifts.map(s=>({...s,id:uid(),rate:first.rate||15.3,employer:'Parkkaffee'})),payments:(first.payments||[]).map(p=>({...p,id:uid()})),active:null};
-        }catch(e){}
-    }
-    return fresh();
+    let data=null;
+    if(saved){ try{data=JSON.parse(saved)}catch(e){} }
+    if(!data) data=fresh();
+    if(!data.settings) data.settings={employers:[]};
+    if(!data.settings.employers) data.settings.employers=[];
+    return data;
 }
 function applyTheme(t){if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t)}
 window.changeTheme=(t)=>{theme=t;localStorage.setItem('wt_theme',t);applyTheme(t)};
@@ -58,7 +51,11 @@ function getWeek(d) {
     let wk = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
     return date.getFullYear() + ' W' + String(wk).padStart(2, '0');
 }
-function getEmp(name){return state.settings.employers.find(e=>e.name===name)||state.settings.employers[0]||{name:name,rate:0,color:'#999'};}
+function getEmp(name){
+    if(!name) return state.settings.employers[0] || {name:'Geen',rate:0,color:'#999'};
+    let match = state.settings.employers.find(e=>(e.name||'').trim().toLowerCase() === name.trim().toLowerCase());
+    return match || state.settings.employers[0] || {name:name,rate:0,color:'#999'};
+}
 function minutes(t){let [h,m]=(t||'0:0').split(':').map(Number);return h*60+m}function hours(s){let a=minutes(s.start),b=minutes(s.end);if(b<a)b+=1440;return Math.max(0,(b-a-(+s.breakMin||0))/60)}function money(s){let r = +s.rate; if(!r){r = getEmp(s.employer).rate;} return hours(s)*r;}function dateFmt(d,opts={weekday:'short',day:'numeric',month:'short'}){return new Date(d+'T12:00').toLocaleDateString('nl-BE',opts)}function esc(s){return (s||'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function totals(){let earned=state.shifts.reduce((a,s)=>a+money(s),0), paid=state.payments.reduce((a,p)=>a+(+p.amount||0),0), h=state.shifts.reduce((a,s)=>a+hours(s),0);return {earned,paid,due:earned-paid,h,avg:h?earned/h:0,days:state.shifts.length}}
 function render(){save();renderNav();let v=$('view'); if(page==='home')v.innerHTML=home(); if(page==='planning')v.innerHTML=planning(); if(page==='shifts')v.innerHTML=shifts(); if(page==='pay')v.innerHTML=pay(); if(page==='stats')v.innerHTML=stats(); }
@@ -87,12 +84,17 @@ window.delEmp=(id)=>{if(state.settings.employers.length<=1)return alert('Je moet
 window.updateFormRate=(name)=>{let e=state.settings.employers.find(x=>x.name===name); if(e && $('fRate')) $('fRate').value = e.rate;};
 function fieldForm(obj,type){
     let empOpts=state.settings.employers.map(e=>`<option value="${esc(e.name)}" ${obj.employer===e.name?'selected':''}>${esc(e.name)}</option>`).join('');
-    return `<div class="row"><div><label>Datum</label><input id="fDate" type="date" value="${obj.date||today()}"></div><div><label>Werkgever</label><select id="fEmployer" onchange="updateFormRate(this.value)">${empOpts}</select></div></div><div class="row"><div><label>Start</label><input id="fStart" type="time" value="${obj.start||'09:00'}"></div><div><label>Einde</label><input id="fEnd" type="time" value="${obj.end||'17:00'}"></div></div>${type==='shift'?`<div class="row"><div><label>Pauze min.</label><input id="fBreak" type="number" value="${obj.breakMin||0}"></div><div><label>Uurloon</label><input id="fRate" type="number" step="0.01" value="${obj.rate||state.settings.employers[0].rate}"></div></div>`:''}<label>Notitie</label><textarea id="fNote" rows="3">${esc(obj.note||'')}</textarea>`
+    let defaultRate = state.settings.employers[0] ? state.settings.employers[0].rate : 15.00;
+    return `<div class="row"><div><label>Datum</label><input id="fDate" type="date" value="${obj.date||today()}"></div><div><label>Werkgever</label><select id="fEmployer" onchange="updateFormRate(this.value)">${empOpts}</select></div></div><div class="row"><div><label>Start</label><input id="fStart" type="time" value="${obj.start||'09:00'}"></div><div><label>Einde</label><input id="fEnd" type="time" value="${obj.end||'17:00'}"></div></div>${type==='shift'?`<div class="row"><div><label>Pauze min.</label><input id="fBreak" type="number" value="${obj.breakMin||0}"></div><div><label>Uurloon</label><input id="fRate" type="number" step="0.01" value="${obj.rate||defaultRate}"></div></div>`:''}<label>Notitie</label><textarea id="fNote" rows="3">${esc(obj.note||'')}</textarea>`
 }
 function openModal(title,body,saveText,onSave){$('modalRoot').innerHTML=`<div class="modal"><div class="sheet"><div class="sheetHead"><h2>${title}</h2><button class="ghost" onclick="closeModal()">Sluit</button></div><div class="card">${body}<div style="height:14px"></div><button id="modalSave">${saveText}</button></div></div></div>`;$('modalSave').onclick=onSave}
 function closeModal(){$('modalRoot').innerHTML=''}
-function openPlan(date=today(),id=null){let p=id?state.plans.find(x=>x.id===id):{date, employer: state.settings.employers[0].name};openModal(id?'Dag aanpassen':'Dag toevoegen',fieldForm(p,'plan'),id?'Opslaan':'Toevoegen',()=>{let o={id:id||uid(),date:$('fDate').value,start:$('fStart').value,end:$('fEnd').value,employer:$('fEmployer').value,note:$('fNote').value};if(!o.date||!o.start||!o.end)return alert('Vul datum, start en einde in.'); if(id)Object.assign(p,o); else state.plans.push(o); closeModal();render()})}
-function openShift(id=null){let s=id?state.shifts.find(x=>x.id===id):{date:today(),breakMin:0,employer:state.settings.employers[0].name, rate:state.settings.employers[0].rate};openModal(id?'Gewerkte shift aanpassen':'Shift toevoegen',fieldForm(s,'shift'),id?'Opslaan':'Toevoegen',()=>{let o={id:id||uid(),date:$('fDate').value,start:$('fStart').value,end:$('fEnd').value,breakMin:+$('fBreak').value||0,rate:+$('fRate').value||0,employer:$('fEmployer').value,note:$('fNote').value};if(!o.date||!o.start||!o.end)return alert('Vul datum, start en einde in.'); if(id)Object.assign(s,o); else state.shifts.push(o); closeModal();render()})}
+function openPlan(date=today(),id=null){
+    if(!state.settings.employers||state.settings.employers.length===0){alert('Voeg eerst een werkgever toe onder het tabblad Stats 📊');page='stats';render();return}
+    let p=id?state.plans.find(x=>x.id===id):{date, employer: state.settings.employers[0].name};openModal(id?'Dag aanpassen':'Dag toevoegen',fieldForm(p,'plan'),id?'Opslaan':'Toevoegen',()=>{let o={id:id||uid(),date:$('fDate').value,start:$('fStart').value,end:$('fEnd').value,employer:$('fEmployer').value,note:$('fNote').value};if(!o.date||!o.start||!o.end)return alert('Vul datum, start en einde in.'); if(id)Object.assign(p,o); else state.plans.push(o); closeModal();render()})}
+function openShift(id=null){
+    if(!state.settings.employers||state.settings.employers.length===0){alert('Voeg eerst een werkgever toe onder het tabblad Stats 📊');page='stats';render();return}
+    let s=id?state.shifts.find(x=>x.id===id):{date:today(),breakMin:0,employer:state.settings.employers[0].name, rate:state.settings.employers[0].rate};openModal(id?'Gewerkte shift aanpassen':'Shift toevoegen',fieldForm(s,'shift'),id?'Opslaan':'Toevoegen',()=>{let o={id:id||uid(),date:$('fDate').value,start:$('fStart').value,end:$('fEnd').value,breakMin:+$('fBreak').value||0,rate:+$('fRate').value||0,employer:$('fEmployer').value,note:$('fNote').value};if(!o.date||!o.start||!o.end)return alert('Vul datum, start en einde in.'); if(id)Object.assign(s,o); else state.shifts.push(o); closeModal();render()})}
 function openPayment(id=null){let p=id?state.payments.find(x=>x.id===id):{date:today()};openModal(id?'Betaling aanpassen':'Betaling toevoegen',`<label>Datum</label><input id="pDate" type="date" value="${p.date||today()}"><label>Bedrag</label><input id="pAmount" type="number" step="0.01" value="${p.amount||''}"><label>Omschrijving</label><input id="pNote" value="${esc(p.note||'')}">`,id?'Opslaan':'Toevoegen',()=>{let o={id:id||uid(),date:$('pDate').value,amount:+$('pAmount').value||0,note:$('pNote').value}; if(!o.date||!o.amount)return alert('Vul datum en bedrag in.'); if(id)Object.assign(p,o); else state.payments.push(o); closeModal();render()})}
 function delPlan(id){if(confirm('Geplande dag verwijderen?')){state.plans=state.plans.filter(x=>x.id!==id);render()}}function delShift(id){if(confirm('Gewerkte shift verwijderen?')){state.shifts=state.shifts.filter(x=>x.id!==id);render()}}function delPayment(id){if(confirm('Betaling verwijderen?')){state.payments=state.payments.filter(x=>x.id!==id);render()}}
 function startPlan(id){let p=state.plans.find(x=>x.id===id);state.active={planId:id,startedAt:Date.now(),date:p.date,employer:p.employer,note:p.note,rate:getEmp(p.employer).rate};page='home';render()}

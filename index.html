@@ -73,7 +73,7 @@ function calendar(){
     // Zoek of er al een plan of shift bestaat voor deze dag
     let p=state.plans.find(x=>x.date===ds), s=state.shifts.find(x=>x.date===ds);
     
-    // Bepaal de juiste klik-actie: bewerk plan, bewerk shift, of voeg nieuw plan toe
+    // Bepaal de juiste klik-actie: bewerk plan, bewerk shift, of voeg nieuw plan toe!
     let click=p?`openPlan('${ds}','${p.id}')` : (s?`openShift('${s.id}')` : `openPlan('${ds}')`);
     
     cells+=`<div class="day ${ds===today()?'today':''}" onclick="${click}"><b>${d}</b><div class="dots">${p?'<span class="dot"></span>':''}${s?'<span class="dot done"></span>':''}</div></div>`
